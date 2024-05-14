@@ -1,7 +1,9 @@
-# TODO: master password, sql integration OR store data as json, sanitize input
-
+import os
+import base64
 from functools import partial
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import sqlite3
 import tkinter as tk
 from tkinter import messagebox
@@ -35,10 +37,79 @@ def getPassword(key):
         messagebox.showwarning("Error", "Password not found")
     return
 
-def generateKey():
-    key = Fernet.generate_key()
+def generateMasterPassword(input):
+    input = input.encode()
+    file = open("salt", "rb")
+    salt = file.read()
+    file.close()
+
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA512(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    passwordKey = base64.urlsafe_b64encode(kdf.derive(input))
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA512(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    passwordHash = base64.urlsafe_b64encode(kdf.derive(passwordKey))
+
+    secretKey = Fernet.generate_key()
+    f = Fernet(passwordKey)
+    encryptedKey = f.encrypt(secretKey)
+
+    file = open("master", "wb")
+    file.write(passwordHash)
+    file.close()
     file = open("key", "wb")
-    file.write(key)
+    file.write(encryptedKey)
+    file.close()
+    return
+
+def verifyMasterPassword(input):
+    input = input.encode()
+    file = open("salt", "rb")
+    salt = file.read()
+    file.close()
+
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA512(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    passwordKey = base64.urlsafe_b64encode(kdf.derive(input))
+
+    # verify passwordKey here
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA512(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    passwordHash = base64.urlsafe_b64encode(kdf.derive(passwordKey))
+    file = open("master", "rb")
+    master = file.read()
+    file.close()
+    if(passwordHash != master):
+        print("Incorrect master password")
+
+    f = Fernet(passwordKey)
+    encryptedKey = loadKey()
+    try:
+        decryptedKey = f.decrypt(encryptedKey)
+    except:
+        print("aaaa")
+    return decryptedKey
+
+def generateSalt():
+    salt = os.urandom(16)
+    file = open("salt", "wb")
+    file.write(salt)
     file.close()
     return
 
@@ -59,7 +130,9 @@ def decryptPassword(key, pword):
     return decPword
 
 def main():
-    key = loadKey()
+    # generateMasterPassword("manul")
+    # usrInput = input("Enter master password: ")
+    key = verifyMasterPassword("pallas")
 
     mainWindow.title("Password Manager")
     mainWindow.mainFrame = tk.Frame(mainWindow)
