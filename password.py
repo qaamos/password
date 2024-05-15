@@ -84,7 +84,6 @@ def verifyMasterPassword(input):
     )
     passwordKey = base64.urlsafe_b64encode(kdf.derive(input))
 
-    # verify passwordKey here
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA512(),
         length=32,
@@ -96,7 +95,7 @@ def verifyMasterPassword(input):
     master = file.read()
     file.close()
     if(passwordHash != master):
-        print("Incorrect master password")
+        return
 
     f = Fernet(passwordKey)
     encryptedKey = loadKey()
@@ -129,10 +128,62 @@ def decryptPassword(key, pword):
     decPword = f.decrypt(pword.encode()).decode()
     return decPword
 
+def newMasterPasswordUI():
+    masterPwWindow = tk.Toplevel()
+    masterPwWindow.title("Login")
+
+    masterPwWindow.masterLabel = tk.Label(masterPwWindow, text="Enter new master password:")
+    masterPwWindow.masterLabel.grid(row=0, column=0)
+
+    masterPwWindow.masterEntry = tk.Entry(masterPwWindow)
+    masterPwWindow.masterEntry.grid(row=1, column=0)
+
+    ready = tk.IntVar()
+    masterPwWindow.saveButton = tk.Button(masterPwWindow, text="Save", command=lambda:ready.set(1))
+    masterPwWindow.saveButton.grid(row=2, column=0)
+    masterPwWindow.saveButton.wait_variable(ready)
+
+    input = masterPwWindow.masterEntry.get()
+    generateMasterPassword(input)
+    key = verifyMasterPassword(input)
+
+    masterPwWindow.focus()
+    masterPwWindow.grab_set()
+
+    masterPwWindow.destroy()
+    return key
+
+def enterMasterPasswordUI():
+    masterPwWindow = tk.Toplevel()
+    masterPwWindow.title("Login")
+
+    masterPwWindow.masterLabel = tk.Label(masterPwWindow, text="Enter master password:")
+    masterPwWindow.masterLabel.grid(row=0, column=0)
+
+    masterPwWindow.masterEntry = tk.Entry(masterPwWindow)
+    masterPwWindow.masterEntry.grid(row=1, column=0)
+
+    ready = tk.IntVar()
+    masterPwWindow.saveButton = tk.Button(masterPwWindow, text="Save", command=lambda:ready.set(1))
+    masterPwWindow.saveButton.grid(row=2, column=0)
+    masterPwWindow.saveButton.wait_variable(ready)
+
+    key = verifyMasterPassword(masterPwWindow.masterEntry.get())
+
+    masterPwWindow.focus()
+    masterPwWindow.grab_set()
+
+    masterPwWindow.destroy()
+    return key
+
 def main():
-    # generateMasterPassword("manul")
-    # usrInput = input("Enter master password: ")
-    key = verifyMasterPassword("pallas")
+    if(not os.path.exists("master")):
+        key = newMasterPasswordUI()
+    else:
+        key = enterMasterPasswordUI()
+    if(key == None):
+        messagebox.showwarning("Error","Master password incorrect")
+        return
 
     mainWindow.title("Password Manager")
     mainWindow.mainFrame = tk.Frame(mainWindow)
