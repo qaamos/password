@@ -13,6 +13,10 @@ mainWindow.withdraw()
 # placeholder, will be replaced with sql database or json file
 passwords = {}
 
+"""
+Adds password to database. Takes encryption key as parameter. Gets account name, username and password from
+respective text fields, encrypts username and password and stores them.
+"""
 def addPassword(key):
     account = mainWindow.accountEntry.get()
     uname = mainWindow.unameEntry.get()
@@ -26,6 +30,10 @@ def addPassword(key):
         messagebox.showwarning("Error", "An error occurred")
     return
 
+"""
+Gets password from database. Takes encryption key as parameter. Gets account name from text field,
+gets respective username and password from db and decrypts them. Displays credentials in message box.
+"""
 def getPassword(key):
     account = mainWindow.accountEntry.get()
     if account in passwords:
@@ -38,6 +46,12 @@ def getPassword(key):
         messagebox.showwarning("Error", "Password not found")
     return
 
+"""
+Generates new master password. Takes new master password as plain text input. Uses PBKDF2HMAC to derive
+a key from master password. Generates new plain text key, which is encrypted with the password key.
+This encrypted key is stored in a file and used for cryptography in this program (after decryption).
+Another key is further derived from the password key, this is stored in a file and used to verify if the password is correct.
+"""
 def generateMasterPassword(input):
     input = input.encode()
     file = open("salt", "rb")
@@ -71,6 +85,11 @@ def generateMasterPassword(input):
     file.close()
     return
 
+"""
+Verifies master password entered by user. Takes plain text password as parameter. Derives a key from the password with PBKDF2HMAC,
+and derives yet another key from the previous one. The second key is compared to the stored master password. If the password is correct,
+use the first key to decrypt the secret key, and return the secret key.
+"""
 def verifyMasterPassword(input):
     input = input.encode()
     file = open("salt", "rb")
@@ -103,6 +122,9 @@ def verifyMasterPassword(input):
     decryptedKey = f.decrypt(encryptedKey)
     return decryptedKey
 
+"""
+Generate random salt and store it in a file.
+"""
 def generateSalt():
     salt = os.urandom(16)
     file = open("salt", "wb")
@@ -110,22 +132,36 @@ def generateSalt():
     file.close()
     return
 
+"""
+Load the encrypted secret key from a file.
+"""
 def loadKey():
     file = open("key", "rb")
     key = file.read()
     file.close()
     return key
 
+"""
+Encrypt a password to be stored in database. Takes encryption key and plain text password,
+returns encrypted password.
+"""
 def encryptPassword(key, pword):
     f = Fernet(key)
     encPword = f.encrypt(pword.encode()).decode()
     return encPword
 
+"""
+Decrypt a password. Takes encryption key and encrypted password, returns decrypted password.
+"""
 def decryptPassword(key, pword):
     f = Fernet(key)
     decPword = f.decrypt(pword.encode()).decode()
     return decPword
 
+"""
+User interface for entering a new master password. Creates UI and calls
+generateMasterPassword and verifyMasterPassword accordingly. Returns decrypted secret key.
+"""
 def newMasterPasswordUI():
     masterPwWindow = tk.Toplevel()
     masterPwWindow.title("Login")
@@ -136,11 +172,13 @@ def newMasterPasswordUI():
     masterPwWindow.masterEntry = tk.Entry(masterPwWindow)
     masterPwWindow.masterEntry.grid(row=1, column=0)
 
+    # wait until user presses the Save button
     ready = tk.IntVar()
     masterPwWindow.saveButton = tk.Button(masterPwWindow, text="Save", command=lambda:ready.set(1))
     masterPwWindow.saveButton.grid(row=2, column=0)
     masterPwWindow.saveButton.wait_variable(ready)
 
+    # generate new master password and retrieve decrypted secret key
     input = masterPwWindow.masterEntry.get()
     generateMasterPassword(input)
     key = verifyMasterPassword(input)
@@ -151,6 +189,10 @@ def newMasterPasswordUI():
     masterPwWindow.destroy()
     return key
 
+"""
+User interface for entering existing master password. Creates UI and calls verifyMasterPassword.
+Returns decrypted secret key.
+"""
 def enterMasterPasswordUI():
     masterPwWindow = tk.Toplevel()
     masterPwWindow.title("Login")
@@ -161,11 +203,13 @@ def enterMasterPasswordUI():
     masterPwWindow.masterEntry = tk.Entry(masterPwWindow)
     masterPwWindow.masterEntry.grid(row=1, column=0)
 
+    # wait until user presses the Save button
     ready = tk.IntVar()
     masterPwWindow.saveButton = tk.Button(masterPwWindow, text="Save", command=lambda:ready.set(1))
     masterPwWindow.saveButton.grid(row=2, column=0)
     masterPwWindow.saveButton.wait_variable(ready)
 
+    # retrieve decrypted secret key
     key = verifyMasterPassword(masterPwWindow.masterEntry.get())
 
     masterPwWindow.focus()
@@ -174,7 +218,11 @@ def enterMasterPasswordUI():
     masterPwWindow.destroy()
     return key
 
+"""
+Calls master password UI. Creates main UI.
+"""
 def main():
+    # check if master password exists, call respective UI function and retrieve key
     if(not os.path.exists("master")):
         key = newMasterPasswordUI()
     else:
@@ -183,6 +231,7 @@ def main():
         messagebox.showwarning("Error","Master password incorrect")
         return
 
+    # create main UI
     mainWindow.deiconify()
     mainWindow.title("Password Manager")
     mainWindow.mainFrame = tk.Frame(mainWindow)
