@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 mainWindow = tk.Tk()
+mainWindow.withdraw()
 # placeholder, will be replaced with sql database or json file
 passwords = {}
 
@@ -99,10 +100,7 @@ def verifyMasterPassword(input):
 
     f = Fernet(passwordKey)
     encryptedKey = loadKey()
-    try:
-        decryptedKey = f.decrypt(encryptedKey)
-    except:
-        print("aaaa")
+    decryptedKey = f.decrypt(encryptedKey)
     return decryptedKey
 
 def generateSalt():
@@ -185,6 +183,7 @@ def main():
         messagebox.showwarning("Error","Master password incorrect")
         return
 
+    mainWindow.deiconify()
     mainWindow.title("Password Manager")
     mainWindow.mainFrame = tk.Frame(mainWindow)
     mainWindow.mainFrame.grid(row=0, column=0)
